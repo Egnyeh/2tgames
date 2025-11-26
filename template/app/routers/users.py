@@ -1,37 +1,13 @@
-from fastapi import APIRouter, Header, status, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Header, status, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from app.models import UserIn, UserOut, UserDb, UserBase
+from app.auth.auth import create_access_token, Token, verify_password
+from app.database import users
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"]
 )
-
-
-class UserBase(BaseModel):
-    username: str
-    password: str
-
-
-class UserIn(UserBase):
-    name: str
-
-
-class UserDb(UserIn):
-    id: int
-
-
-class UserLoginIn(UserBase):
-    pass
-
-class UserOut(BaseModel):
-    id: int
-    username: str
-    name: str
-
-class TokenOut(BaseModel):
-    token: str
-
-users: list[UserDb] = []
 
 
 @router.post("/signup/", status_code=status.HTTP_201_CREATED)
@@ -53,8 +29,19 @@ async def create_user(userIn: UserIn):
     )
 
 
-@router.post("/login/", response_model = TokenOut, status_code = status.HTTP_200_OK)
-async def login(userLoginIn: UserLoginIn):
+@router.post("/login/", response_model = Token, status_code = status.HTTP_200_OK)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    #1. Buscamos username y password en la petición HTTP
+    username: str | None = from_data.get("username")
+    password: str | None = from_data.get("password")
+
+    if username is None or password is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail = "Username and/or password incorrect"
+        )
+
+    #2. Buscamos username en la bbdd
     usersFound = [u for u in users if u.username == userLoginIn.username]
     if not usersFound:
         raise HTTPException(
@@ -62,16 +49,22 @@ async def login(userLoginIn: UserLoginIn):
             detail='Username and/or password incorrect'
         )
     
+    #3. Checkeamos contraseñas
     user: UserDb = usersFound[0]
-    if user.password != userLoginIn.password:
+    if verify_password(password, user.password):
          raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Username and/or password incorrect'
         )
     
-    return TokenOut(
-        token = f'mytoken:{user.name}-{user.name}'
-    )
+    token = create_access_token(
+        UserBase(
+            username = user.username,
+            password = user.password
+            )
+        )
+    
+    return token
 
 @router.get(
     "/",
