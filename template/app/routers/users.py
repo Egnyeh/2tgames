@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Header, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from app.models import UserIn, UserOut, UserDb, UserBase
-from app.auth.auth import create_access_token, Token, verify_password
+from app.auth.auth import TokenData, create_access_token, Token, verify_password, oauth2_scheme, decode_token
 from app.database import users
 
 router = APIRouter(
@@ -71,25 +71,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     response_model=list[UserOut],
     status_code=status.HTTP_200_OK
 )
-async def get_all_users(authorization: str = Header()):
-    print(authorization)
-
-    parts = authorization.split(":")
-    if len(parts) != 2:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden"
-        )
+async def get_all_users(token: str = Depends(oauth2_scheme)):
+    data: TokenData = decode_token(token)
     
-    payload_parts = parts[1].split("-")
-    if len(payload_parts) != 2:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden"
-        )
-    
-    username = payload_parts[0]
-    if username not in [u.username for u in users]:
+    if data.username not in [u.username for u in users]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden"
