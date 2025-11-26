@@ -32,8 +32,8 @@ async def create_user(userIn: UserIn):
 @router.post("/login/", response_model = Token, status_code = status.HTTP_200_OK)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     #1. Buscamos username y password en la petición HTTP
-    username: str | None = from_data.get("username")
-    password: str | None = from_data.get("password")
+    username: str | None = form_data.username
+    password: str | None = form_data.password
 
     if username is None or password is None:
         raise HTTPException(
@@ -42,7 +42,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         )
 
     #2. Buscamos username en la bbdd
-    usersFound = [u for u in users if u.username == userLoginIn.username]
+    usersFound = [u for u in users if u.username == username]
     if not usersFound:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -51,7 +51,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     
     #3. Checkeamos contraseñas
     user: UserDb = usersFound[0]
-    if verify_password(password, user.password):
+    if not verify_password(password, user.password):
          raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Username and/or password incorrect'
