@@ -30,6 +30,9 @@ async def create_user(userIn: UserIn):
         )
     )
 
+@router.get("/select/", status_code=status.HTTP_200_OK)
+async def get_all_users(from_data:)
+
 
 @router.post("/login/", response_model=Token, status_code=status.HTTP_200_OK)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
