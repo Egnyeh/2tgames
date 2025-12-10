@@ -10,7 +10,7 @@ class UserIn(UserBase):
 
 
 class UserDb(UserIn):
-    id: int
+    pass
 
 
 class UserLoginIn(UserBase):

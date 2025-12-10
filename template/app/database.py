@@ -5,7 +5,7 @@ from app.models import UserDb
 
 db_config = {
     "host": "myapidb",
-    "puerto": "33006",
+    "port": 3306,
     "user": "myapi",
     "password": "myapi",
     "database": "myapi"
@@ -25,8 +25,7 @@ def insert_user(user: UserDb) -> int:
 
 
 def get_user_by_username(username: str) -> UserDb | None:
-    return None
-
+    return None  # Implementación pendiente
 
 users: list[UserDb] = [
     UserDb(
