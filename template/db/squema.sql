@@ -1,23 +1,111 @@
-create table users (
-       id int primary key auto_increment,
-       name varchar(20) not null,
-       username varchar(20) not null,
-       password varchar(512) not null
-) engine=innodb;
+CREATE TABLE usuario(
+    id INT AUTO_INCREMENT,
+    email VARCHAR(80) NOT NULL UNIQUE,
+    nombre VARCHAR(50) NOT NULL, 
+    contraseña VARCHAR(255) NOT NULL,
+    tipo VARCHAR(10) NOT NULL,
+    PRIMARY KEY(id)
+);
 
-create table films (
-       id int primary key auto_increment,
-       title varchar(256) not null,
-       synopsis text
-) engine=innodb;
+CREATE TABLE cliente (
+    id INT,
+    nombre_usuario VARCHAR(50),
+    PRIMARY KEY(id),
+    FOREIGN KEY(id) REFERENCES usuario(id) ON DELETE CASCADE
+); 
 
-create table user_starred_films (
-       id int primary key auto_increment,
-       user int not null,
-       film int not null,
-       stars int not null,
-       comment text,
-       foreign key (user) references users(id),
-       foreign key (film) references films(id),
-       unique key (user, film)
-) engine=innodb;
+CREATE TABLE admin(
+    id INT,
+    fecha_alta DATE NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY(id) REFERENCES usuario(id) ON DELETE CASCADE
+);
+
+CREATE TABLE estado(
+    id INT AUTO_INCREMENT,
+    name VARCHAR(20) NOT NULL,
+    PRIMARY KEY (id)
+);
+
+INSERT INTO estado (id, name) VALUES
+(1, 'Procesando'),
+(2, 'Preparando'),
+(3, 'Enviado'),
+(4, 'Recibido');
+
+CREATE TABLE pedido(
+    numero_pedido INT AUTO_INCREMENT,
+    id_usuario INT NOT NULL,
+    fecha_pedido DATE NOT NULL, 
+    precio_total DECIMAL(10,2) NOT NULL, 
+    estado INT NOT NULL,
+    PRIMARY KEY (numero_pedido),
+    FOREIGN KEY (estado) REFERENCES estado(id),
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id)
+);
+
+CREATE TABLE producto(
+    id INT AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL, 
+    descripcion VARCHAR(500),
+    categoria VARCHAR(50), 
+    precio_unitario DECIMAL(10,2) NOT NULL, 
+    stock INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE linea_pedido(
+    id INT AUTO_INCREMENT,
+    numero_pedido INT NOT NULL,
+    id_producto INT NOT NULL,
+    precio DECIMAL(10,2) NOT NULL,
+    cantidad INT NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY (numero_pedido) REFERENCES pedido(numero_pedido) ON DELETE CASCADE,
+    FOREIGN KEY (id_producto) REFERENCES producto(id)
+);
+
+CREATE TABLE evento(
+    id INT AUTO_INCREMENT,
+    id_admin INT NOT NULL,
+    nombre_evento VARCHAR(100) NOT NULL, 
+    fecha DATE NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (id_admin) REFERENCES admin(id)
+);
+
+CREATE TABLE juego(
+    id INT AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL, 
+    precio_dia DECIMAL(10,2) NOT NULL, 
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE reserva(
+    id INT AUTO_INCREMENT,
+    id_usuario INT NOT NULL,
+    tipo INT NOT NULL,
+    cantidad INT NOT NULL,
+    fecha_reserva TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id)
+);
+
+CREATE TABLE reserva_juego(
+    id_reserva INT, 
+    id_juego INT,
+    fecha_inicio DATE NOT NULL, 
+    fecha_fin DATE NOT NULL, 
+    precio_total DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY(id_reserva, id_juego),
+    FOREIGN KEY (id_reserva) REFERENCES reserva(id) ON DELETE CASCADE,
+    FOREIGN KEY (id_juego) REFERENCES juego(id)
+);
+
+CREATE TABLE reserva_evento(
+    id_reserva INT, 
+    id_evento INT,
+    PRIMARY KEY(id_reserva, id_evento),
+    FOREIGN KEY (id_reserva) REFERENCES reserva(id) ON DELETE CASCADE,
+    FOREIGN KEY (id_evento) REFERENCES evento(id)
+);
