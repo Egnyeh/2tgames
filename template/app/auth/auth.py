@@ -1,7 +1,7 @@
 import bcrypt
 
 from datetime import datetime, timedelta
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from pydantic import BaseModel
@@ -65,4 +65,8 @@ def verify_admin(token: str = Depends(oauth2_scheme)) -> TokenData:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
         )
+    return data
+
+def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
+    data: TokenData = decode_token(token)
     return data
