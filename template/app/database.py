@@ -1,6 +1,7 @@
+from typing import Iterable
 import mariadb
 from app.auth.auth import get_hash_password
-from app.models import (AdminDb, ClienteDb, ProductCreate, ProductUpdate, UserCreate, UserDb, ProductOut)
+from app.models import (AdminDb, ClienteDb, ProductCreate, ProductUpdate, UserCreate, ProductOut)
 
 
 db_config = {
@@ -234,5 +235,69 @@ def delete_product(product_id: int) -> bool:
 
 # ------------- ORDER FUNCTIONS --------------
 
-def create_order():
-    pass
+def add_product_to_order(numero_pedido: int, id_producto: int,  cantidad: int, precio: float | None = None) -> int | None:
+    # Comprobar si el pedido existe
+    with mariadb.connect(**db_config) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT FROM pedido WHERE numero_pedido = ? LIMIT 1", (numero_pedido,))
+            if cursor.fetchone() is None:
+                return None
+                
+    # Comprobar si el producto existe
+    cursor.execute("SELECT precio_unitario FROM producto WHERE id = ? LIMIT 1", (id_producto,))
+    result = cursor.fetchone()
+    if result is None:
+        return None
+        
+    if precio is None:
+        precio = result[0] 
+
+    sql = """
+        INSERT INTO linea_pedido (numero_pedido, id_producto, precio, cantidad)
+        VALUES (?, ?, ?, ?)
+    """
+    cursor.execute(sql, (numero_pedido, id_producto, precio, cantidad))  
+    conn.commit()
+        
+    return cursor.lastrowid
+
+
+def create_order_with_items(pedido:dict, items: Iterable[dict]) -> int | None:
+    conn = mariadb.connect(**db_config)
+    cursor = conn.cursor()
+
+    sql_pedido = """
+        INSERT INTO pedido(id_usuario, fecha_peido, precio_total, estado)
+        VALUES (?, ?, ?, ?)
+    """
+
+    values_pedido =(
+        pedido['id_usuario'],
+        pedido['fecha_pedido'],
+        pedido['precio_total'],
+        pedido['estado']
+        )
+    cursor.execute(sql_pedido, values_pedido)
+    numero_pedido = cursor.lastrowid
+                
+    # Insertar productos
+    sql_item = """
+        INSERT INTO linea_pedido (numero_pedido, id_producto, precio, cantidad)
+        VALUES (?, ?, ?, ?)
+    """
+    item_values = []
+    for item in items:
+        id_producto = item["id_producto"]
+        cantidad = item["cantidad"]
+        precio = item.get("precio")
+        item_values.append((numero_pedido, id_producto, precio, cantidad))
+
+    if item_values:
+        cursor.execute(sql_item, item_values)
+        conn.commit()
+        return numero_pedido
+
+    cursor.close()
+    conn.close()
+
+    return None
