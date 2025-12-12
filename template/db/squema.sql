@@ -1,21 +1,35 @@
+DROP TABLE IF EXISTS reserva_evento;
+DROP TABLE IF EXISTS reserva_juego;
+DROP TABLE IF EXISTS reserva;
+DROP TABLE IF EXISTS linea_pedido;
+DROP TABLE IF EXISTS pedido;
+DROP TABLE IF EXISTS evento;
+DROP TABLE IF EXISTS juego;
+DROP TABLE IF EXISTS producto;
+DROP TABLE IF EXISTS estado;
+DROP TABLE IF EXISTS cliente;
+DROP TABLE IF EXISTS admin;
+DROP TABLE IF EXISTS usuario;
+
 CREATE TABLE usuario(
     id INT AUTO_INCREMENT,
     email VARCHAR(80) NOT NULL UNIQUE,
     nombre VARCHAR(50) NOT NULL, 
-    contraseña VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
     tipo VARCHAR(10) NOT NULL,
     PRIMARY KEY(id)
 );
 
 CREATE TABLE cliente (
     id INT,
-    nombre_usuario VARCHAR(50),
+    username VARCHAR(50) NOT NULL UNIQUE,
     PRIMARY KEY(id),
     FOREIGN KEY(id) REFERENCES usuario(id) ON DELETE CASCADE
 ); 
 
 CREATE TABLE admin(
     id INT,
+    username VARCHAR(50) NOT NULL UNIQUE,
     fecha_alta DATE NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY(id) REFERENCES usuario(id) ON DELETE CASCADE
