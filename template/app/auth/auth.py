@@ -21,14 +21,16 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
+    user_id: int
+    username: str
+    tipo: str
 
 
 def get_hash_password(plain_pw: str) -> str:
     pw_bytes = plain_pw.encode("utf-8")
     salt = bcrypt.gensalt()
     hashed_pw = bcrypt.hashpw(password=pw_bytes, salt=salt)
-    return hashed_pw
+    return hashed_pw.decode("utf-8") #Mariadb espera un string en password y bycrip devuelve bytes
 
 
 def verify_password(plain_pw, hashed_pw) -> bool:
@@ -37,20 +39,30 @@ def verify_password(plain_pw, hashed_pw) -> bool:
     return bcrypt.checkpw(password=plain_pw_bytes, hashed_password=hashed_pw_bytes)
 
 
-def create_access_token(user: UserBase) -> Token:
+def create_access_token(user: dict) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MIN)
-    to_encode = {"sub": user.username, "exp": expire}
+    to_encode = data.copy()
+    to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return Token(access_token=encoded_jwt, token_type="bearer")
+    return encoded_jwt
 
 
 def decode_token(token: str) -> TokenData:
     try:
         payload: dict = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return TokenData(username=payload.get("sub"))
+        return TokenData(user_id=payload.get("user_id"), username=payload.get("username"), tipo=payload.get("tipo"))
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+# Tenemos que comprobar si está en la tabla de admins o no
+def verify_admin(token: str = Depends(oauth2_scheme)) -> TokenData:
+    data: TokenData = decode_token(token)
+    if data.tipo != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    return data
