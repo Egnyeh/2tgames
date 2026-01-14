@@ -7,6 +7,7 @@ from app.models import (
     ProductCreate,
     ProductUpdate,
     UserCreate,
+    UserOut,
     ProductOut,
 )
 
@@ -54,46 +55,47 @@ def insert_user(user: UserCreate) -> int:
 
 def get_user_by_username(username: str) -> ClienteDb | AdminDb | None:
     with mariadb.connect(**db_config) as conn:
-        sql_cliente = """ 
-            SELECT u.id, u.email, u.nombre, u.password, u.tipo, c.username
-            FROM usuario u
-            INNER JOIN cliente c ON u.id = c.id
-            WHERE c.username = ?
-        """
-        cursor.execute(sql_cliente, (username,))
-        row = cursor.fetchone()
-
-        if row:
-            return ClienteDb(
-                id=row[0],
-                email=row[1],
-                nombre=row[2],
-                password=row[3],
-                tipo=row[4],
-                username=row[5],
-            )
-
-        sql_admin = """
-            SELECT u.id, u.email, u.nombre, u.passwor, u.tipo, a.username, a.fecha_alta
-            FROM usuario u
-            INNER JOIN admin a ON u.id = a.id
-            WHERE a.username = ?
+        with conn.cursor() as cursor:
+            sql_cliente = """ 
+                SELECT u.id, u.email, u.nombre, u.password, u.tipo, c.username
+                FROM usuario u
+                INNER JOIN cliente c ON u.id = c.id
+                WHERE c.username = ?
             """
-        cursor.execute(sql_admin, (username,))
-        row = cursor.fetchone()
+            cursor.execute(sql_cliente, (username,))
+            row = cursor.fetchone()
 
-        if row:
-            return AdminDb(
-                id=row[0],
-                email=row[1],
-                nombre=row[2],
-                password=row[3],
-                tipo=row[4],
-                username=row[5],
-                fecha_alta=row[6],
-            )
+            if row:
+                return ClienteDb(
+                    id=row[0],
+                    email=row[1],
+                    nombre=row[2],
+                    password=row[3],
+                    tipo=row[4],
+                    username=row[5],
+                )
 
-        return None
+            sql_admin = """
+                SELECT u.id, u.email, u.nombre, u.password, u.tipo, a.username, a.fecha_alta
+                FROM usuario u
+                INNER JOIN admin a ON u.id = a.id
+                WHERE a.username = ?
+                """
+            cursor.execute(sql_admin, (username,))
+            row = cursor.fetchone()
+
+            if row:
+                return AdminDb(
+                    id=row[0],
+                    email=row[1],
+                    nombre=row[2],
+                    password=row[3],
+                    tipo=row[4],
+                    username=row[5],
+                    fecha_alta=row[6],
+                )
+
+            return None
 
 
 def get_user_by_id(user_id: int) -> ClienteDb | AdminDb | None:

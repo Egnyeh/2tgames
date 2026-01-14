@@ -46,7 +46,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         )
 
     # 3. Checkeamos contraseñas
-    user: UserDb = userFound[0]
+    user: UserDb = userFound
     if not verify_password(password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -14,6 +14,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     username: str
+    nombre: str
     password: str
     tipo: str = "cliente" #Por defecto va a definirse como cliente
 
