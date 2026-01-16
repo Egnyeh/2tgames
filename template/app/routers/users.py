@@ -22,17 +22,7 @@ async def create_user(user: UserCreate):
             status_code=status.HTTP_409_CONFLICT, detail="Username already exists"
         )
 
-    user_id = insert_user(user)
-
-    created_user = get_user_by_id(user_id)
-
-    return UserOut(
-        id=created_user.id,
-        email=created_user.email,
-        username=created_user.username,
-        nombre=created_user.nombre,
-        tipo=created_user.tipo,
-    )
+    return insert_user(user) #WIP
 
 
 @router.post("/login/", response_model=Token, status_code=status.HTTP_200_OK)
@@ -56,7 +46,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         )
 
     # 3. Checkeamos contraseñas
-    user: UserDb = userFound[0]
+    user: UserDb = userFound
     if not verify_password(password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,20 +55,20 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
     token_data = {"user_id": user.id, "username": user.username, "tipo": user.tipo}
 
-
     access_token = create_access_token(token_data)
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.get("/", response_model=UserOut, status_code=status.HTTP_200_OK)
+@router.get("/me/", response_model=UserOut, status_code=status.HTTP_200_OK)
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     data: TokenData = decode_token(token)
 
     user = get_user_by_id(data.user_id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND
         )
+    
     return UserOut(
         id=user.id,
         email=user.email,

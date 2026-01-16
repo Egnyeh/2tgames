@@ -14,6 +14,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     username: str
+    nombre: str
     password: str
     tipo: str = "cliente" #Por defecto va a definirse como cliente
 
@@ -57,6 +58,7 @@ class ProductBase(BaseModel):
     categoria: str
     precio_unitario: float
     stock: int = 0
+    disponibilidad: bool = True #Como default lo marcamos como disponible
 
 
 class ProductCreate(ProductBase): # Para que el admin cree productos
