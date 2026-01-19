@@ -1,7 +1,7 @@
 from datetime import date
 import string
 from sys import float_repr_style
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -14,7 +14,6 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     username: str
-    nombre: str
     password: str
     tipo: str = "cliente" #Por defecto va a definirse como cliente
 
@@ -58,7 +57,6 @@ class ProductBase(BaseModel):
     categoria: str
     precio_unitario: float
     stock: int = 0
-    disponibilidad: bool = True #Como default lo marcamos como disponible
 
 
 class ProductCreate(ProductBase): # Para que el admin cree productos
@@ -115,3 +113,16 @@ class TokenData(BaseModel): #datos dentro del token JWT
     user_id: int
     username: str
     tipo: str
+
+
+class OrderItemIn(BaseModel):
+    id_producto: int
+    cantidad: int
+
+
+class OrderCreate(BaseModel):
+    items: List[OrderItemIn]
+
+
+class OrderOut(BaseModel):
+    numero_pedido: int

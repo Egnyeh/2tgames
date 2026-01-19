@@ -65,7 +65,6 @@ CREATE TABLE producto(
     categoria VARCHAR(50), 
     precio_unitario DECIMAL(10,2) NOT NULL, 
     stock INT NOT NULL DEFAULT 0,
-    disponibilidad BOOLEAN NOT NULL DEFAULT TRUE,
     PRIMARY KEY (id)
 );
 
