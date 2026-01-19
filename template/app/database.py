@@ -318,7 +318,7 @@ def add_product_to_order(
     return cursor.lastrowid
 
 
-def create_order_with_items(pedido: dict, items: Iterable[dict]) -> int | None:
+def create_order_with_items(order: dict, items: Iterable[dict]) -> int | None:
     conn = mariadb.connect(**db_config)
     cursor = conn.cursor()
 
@@ -327,13 +327,13 @@ def create_order_with_items(pedido: dict, items: Iterable[dict]) -> int | None:
         VALUES (?, ?, ?, ?)
     """
 
-    values_pedido = (
-        pedido["id_usuario"],
-        pedido["fecha_pedido"],
-        pedido["precio_total"],
-        pedido["estado"],
+    values_order = (
+        order["id_usuario"],
+        order["fecha_pedido"],
+        order["precio_total"],
+        order["estado"],
     )
-    cursor.execute(sql_pedido, values_pedido)
+    cursor.execute(sql_pedido, values_order)
     numero_pedido = cursor.lastrowid
 
     # Insertar productos
