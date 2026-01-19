@@ -23,7 +23,7 @@ db_config = {
 # ------------- USUARY FUNCTIONS --------------
 
 
-def insert_user(user: UserCreate) -> int:
+def insert_user(user: UserCreate) -> UserOut:  # ✅ Cambiado de int a UserOut
     with mariadb.connect(**db_config) as conn:
         with conn.cursor() as cursor:
             hashed_password = get_hash_password(user.password)
@@ -267,6 +267,7 @@ def update_product(product_id: int, product: ProductUpdate) -> bool:
 
             valores.append(product_id)
             sql = f"UPDATE producto SET {', '.join(campos)} WHERE id = ?"
+            cursor.execute(sql, valores)  # ✅ AÑADIDO: Faltaba ejecutar el SQL
             conn.commit()
             return (
                 cursor.rowcount > 0
@@ -288,85 +289,86 @@ def delete_product(product_id: int) -> bool:
 def add_product_to_order(
     numero_pedido: int, id_producto: int, cantidad: int, precio: float | None = None
 ) -> int | None:
-    # Comprobar si el pedido existe
     with mariadb.connect(**db_config) as conn:
         with conn.cursor() as cursor:
+            # Comprobar si el pedido existe
             cursor.execute(
-                "SELECT FROM pedido WHERE numero_pedido = ? LIMIT 1", (numero_pedido,)
+                "SELECT numero_pedido FROM pedido WHERE numero_pedido = ? LIMIT 1", 
+                (numero_pedido,),
             )
             if cursor.fetchone() is None:
                 return None
 
-    # Comprobar si el producto existe
-    cursor.execute(
-        "SELECT precio_unitario FROM producto WHERE id = ? LIMIT 1", (id_producto,)
-    )
-    result = cursor.fetchone()
-    if result is None:
-        return None
+            # Comprobar si el producto existe
+            cursor.execute(
+                "SELECT precio_unitario FROM producto WHERE id = ? LIMIT 1",
+                (id_producto,),
+            )
+            result = cursor.fetchone()
+            if result is None:
+                return None
 
-    if precio is None:
-        precio = result[0]
+            if precio is None:
+                precio = result[0]
 
-    sql = """
-        INSERT INTO linea_pedido (numero_pedido, id_producto, precio, cantidad)
-        VALUES (?, ?, ?, ?)
-    """
-    cursor.execute(sql, (numero_pedido, id_producto, precio, cantidad))
-    conn.commit()
+            sql = """
+                INSERT INTO linea_pedido (numero_pedido, id_producto, precio, cantidad)
+                VALUES (?, ?, ?, ?)
+            """
+            cursor.execute(sql, (numero_pedido, id_producto, precio, cantidad))
+            conn.commit()
 
-    return cursor.lastrowid
+            return cursor.lastrowid
 
 
 def create_order_with_items(order: dict, items: Iterable[dict]) -> int | None:
-    conn = mariadb.connect(**db_config)
-    cursor = conn.cursor()
+    # ✅ CORREGIDO: Mejor manejo de conexión con context manager
+    try:
+        with mariadb.connect(**db_config) as conn:
+            with conn.cursor() as cursor:
+                sql_pedido = """
+                    INSERT INTO pedido(id_usuario, fecha_pedido, precio_total, estado)
+                    VALUES (?, ?, ?, ?)
+                """  
 
-    sql_pedido = """
-        INSERT INTO pedido(id_usuario, fecha_peido, precio_total, estado)
-        VALUES (?, ?, ?, ?)
-    """
+                values_order = (
+                    order["id_usuario"],
+                    order["fecha_pedido"],
+                    order["precio_total"],
+                    order["estado"],
+                )
+                cursor.execute(sql_pedido, values_order)
+                numero_pedido = cursor.lastrowid
 
-    values_order = (
-        order["id_usuario"],
-        order["fecha_pedido"],
-        order["precio_total"],
-        order["estado"],
-    )
-    cursor.execute(sql_pedido, values_order)
-    numero_pedido = cursor.lastrowid
+                # Insertar productos
+                if items:
+                    sql_item = """
+                        INSERT INTO linea_pedido (numero_pedido, id_producto, precio, cantidad)
+                        VALUES (?, ?, ?, ?)
+                    """
+                    for item in items:
+                        id_producto = item["id_producto"]
+                        cantidad = item["cantidad"]
+                        precio = item.get("precio")
+                        cursor.execute(
+                            sql_item, (numero_pedido, id_producto, precio, cantidad)
+                        )
 
-    # Insertar productos
-    sql_item = """
-        INSERT INTO linea_pedido (numero_pedido, id_producto, precio, cantidad)
-        VALUES (?, ?, ?, ?)
-    """
-    item_values = []
-    for item in items:
-        id_producto = item["id_producto"]
-        cantidad = item["cantidad"]
-        precio = item.get("precio")
-        item_values.append((numero_pedido, id_producto, precio, cantidad))
-
-    if item_values:
-        cursor.execute(sql_item, item_values)
-        conn.commit()
-        return numero_pedido
-
-    cursor.close()
-    conn.close()
-
-    return None
+                conn.commit()
+                return numero_pedido
+    except mariadb.Error as e:
+        print(f"Error al crear pedido: {e}")
+        return None
 
 
 def get_orders_by_user(user_id: int) -> list[dict]:
     with mariadb.connect(**db_config) as conn:
         with conn.cursor() as cursor:
             sql = """
-                SELECT p.numero_pedido, p.id_usuario, p.fecha_peido, p.precio_total, p.estado
+                SELECT p.numero_pedido, p.id_usuario, p.fecha_pedido, p.precio_total, p.estado
                 FROM pedido p
                 WHERE p.id_usuario = ?
-            """
+            """  
             cursor.execute(sql, (user_id,))
             rows = cursor.fetchall()
 
@@ -376,7 +378,7 @@ def get_orders_by_user(user_id: int) -> list[dict]:
                     {
                         "numero_pedido": row[0],
                         "id_usuario": row[1],
-                        "fecha_peido": row[2],
+                        "fecha_pedido": row[2],  
                         "precio_total": row[3],
                         "estado": row[4],
                     }
