@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from app.models import OrderCreate, OrderOut, ProductOut, TokenData, ProductInOrder
 from app.auth.auth import get_current_user
 from app.database import add_product_to_order, create_order_with_items, get_orders_by_user
-from template.app.routers import products
+from app.routers import products
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
