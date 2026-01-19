@@ -75,6 +75,10 @@ class ProductUpdate(BaseModel): #Al actualizar productos, los campos pueden ser 
 class ProductOut(ProductBase):
     id: int
 
+class ProductInOrder(BaseModel):
+    id: int
+    cantidad: int
+
 
 #============= ORDER MODELS ================
 
@@ -92,7 +96,7 @@ class OrderLineOut(BaseModel):
 
 
 class OrderCreate(BaseModel): #Se crea un pedido a base de una lista de lineas de pedido (productos)
-    lineas: list[OrderLineCreate]
+    lineas: list[ProductInOrder]
 
 
 class OrderOut(BaseModel):
