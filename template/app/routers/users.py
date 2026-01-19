@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Header, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from app.models import UserIn, UserOut, UserDb, UserBase
+from app.models import UserOut, UserDb, UserCreate
 from app.auth.auth import (
     TokenData,
     create_access_token,
@@ -9,34 +9,25 @@ from app.auth.auth import (
     oauth2_scheme,
     decode_token,
 )
-from app.database import get_user_by_username, users, insert_user
+from app.database import get_user_by_username, insert_user, get_user_by_id
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.post("/signup/", status_code=status.HTTP_201_CREATED)
-async def create_user(userIn: UserIn):
-    userDb = get_user_by_username(userIn.username)
+async def create_user(user: UserCreate):
+    userDb = get_user_by_username(user.username)
     if userDb is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Username already exists"
         )
 
-    insert_user(
-        UserDb(
-            name=userIn.name,
-            username=userIn.username,
-            password=userIn.password,
-        )
-    )
-
-@router.get("/select/", status_code=status.HTTP_200_OK)
-async def get_all_users(from_data:)
+    return insert_user(user) #WIP
 
 
 @router.post("/login/", response_model=Token, status_code=status.HTTP_200_OK)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # Buscamos username y password en la petición HTTP
+    # 1. Buscamos username y password en la petición HTTP
     username: str | None = form_data.username
     password: str | None = form_data.password
 
@@ -46,37 +37,42 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             detail="Username and/or password incorrect",
         )
 
-    # Buscamos username en la bbdd
-    usersFound = [u for u in users if u.username == username]
-    if not usersFound:
+    # 2. Buscamos username en la bbdd
+    userFound = get_user_by_username(username)
+    if not userFound:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Username and/or password incorrect",
         )
 
-    # Checkeamos contraseñas
-    user: UserDb = usersFound[0]
+    # 3. Checkeamos contraseñas
+    user: UserDb = userFound
     if not verify_password(password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Username and/or password incorrect",
         )
 
-    token = create_access_token(
-        UserBase(username=user.username, password=user.password)
-    )
+    token_data = {"user_id": user.id, "username": user.username, "tipo": user.tipo}
 
-    return token
+    access_token = create_access_token(token_data)
+    return Token(access_token=access_token, token_type="bearer")
 
-@router.get("/", response_model=list[UserOut], status_code=status.HTTP_200_OK)
-async def get_all_users(token: str = Depends(oauth2_scheme)):
+
+@router.get("/me/", response_model=UserOut, status_code=status.HTTP_200_OK)
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     data: TokenData = decode_token(token)
 
-    if data.username not in [u.username for u in users]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
-    # Convierto un list[UserDb] en list[UserOut]
-    return [
-        UserOut(id=userDb.id, name=userDb.name, username=userDb.username)
-        for userDb in users
-    ]
+    user = get_user_by_id(data.user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND
+        )
+    
+    return UserOut(
+        id=user.id,
+        email=user.email,
+        username=user.username,
+        nombre=user.nombre,
+        tipo=user.tipo,
+    )
