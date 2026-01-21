@@ -322,7 +322,6 @@ def add_product_to_order(
 
 
 def create_order_with_items(order: dict, items: Iterable[dict]) -> int | None:
-    # ✅ CORREGIDO: Mejor manejo de conexión con context manager
     try:
         with mariadb.connect(**db_config) as conn:
             with conn.cursor() as cursor:
@@ -384,3 +383,25 @@ def get_orders_by_user(user_id: int) -> list[dict]:
                     }
                 )
             return orders
+
+def get_order_lines(numero_pedido: int) -> list[dict]:
+    with mariadb.connect(**db_config) as conn:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT id, numero_pedido, id_producto, precio, cantidad
+                FROM linea_pedido
+                WHERE numero_pedido = ?
+            """
+            cursor.execute(sql, (numero_pedido,))
+            rows = cursor.fetchall()
+            
+            lineas = []
+            for row in rows:
+                lineas.append({
+                    "id": row[0],
+                    "numero_pedido": row[1],
+                    "id_producto": row[2],
+                    "precio": row[3],
+                    "cantidad": row[4]
+                })
+            return lineas
