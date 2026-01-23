@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Header, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from app.models import UserOut, UserDb, UserCreate
+from app.models import OrderOut, UserOut, UserDb, UserCreate
 from app.auth.auth import (
     TokenData,
     create_access_token,
@@ -76,3 +76,40 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         nombre=user.nombre,
         tipo=user.tipo,
     )
+
+@router.get("/users/{user_id}/orders/", response_model= list[OrderOut], status_code=status.HTTP_200_OK)
+async def get_user_orders(user_id: int, token: str = Depends(oauth2_scheme)):
+    data: TokenData = decode_token(token)
+
+    if data.user_id != user_id and data.tipo != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access these orders"
+        )
+    
+    from app.routers.orders import get_orders_by_user_id
+
+    orders = get_orders_by_user_id(user_id)
+    return orders
+
+@router.get("/users/{user_id}/orders/{order_id}", response_model= OrderOut, status_code=status.HTTP_200_OK)
+async def get_user_order_by_id(user_id: int, order_id: int, token: str = Depends(oauth2_scheme)):
+    data: TokenData = decode_token(token)
+
+    if data.user_id != user_id and data.tipo != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this order"
+        )
+    
+    from app.routers.orders import get_orders_by_user
+
+    orders = get_orders_by_user(user_id)
+    order = next((o for o in orders if ['numero_pedido'] == order_id), None) #Devuelve un diccionario, y los diccionarios utilizan corchetes para acceder a los valores
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+    
+    return order
