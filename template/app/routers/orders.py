@@ -3,8 +3,9 @@ from venv import create
 from webbrowser import get
 from fastapi import APIRouter, Depends, status, HTTPException
 
+
 from app.models import OrderCreate, OrderOut, ProductOut, TokenData, ProductInOrder
-from app.auth.auth import get_current_user
+from app.auth.auth import decode_token, get_current_user, oauth2_scheme, TokenData
 from app.database import get_order_lines, create_order_with_items, get_order_lines, get_orders_by_user, get_product_by_id
 from app.routers import products
 
@@ -86,6 +87,18 @@ async def create_order(
             lineas=lineas_insertadas
         )
 
+@router.get("/orders/{user_id}/", response_model= list[OrderOut], status_code=status.HTTP_200_OK)
+async def get_orders_by_user_id(user_id: int, token: str = Depends(oauth2_scheme)):
+    data: TokenData = decode_token(token)
+
+    if data.user_id != user_id and data.tipo != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access these orders"
+        )
+
+    orders = get_orders_by_user(user_id)
+    return orders
 
 """
 @router.get("/{order_id}", response_model=OrderOut, status_code=status.HTTP_200_OK)
